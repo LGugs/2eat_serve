@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<buildpath>
+	<buildpathentry kind="src" path="api"/>
+	<buildpathentry kind="src" path="src"/>
+	<buildpathentry kind="src" path="templates"/>
+	<buildpathentry kind="src" path="tests/Functional"/>
+	<buildpathentry kind="src" path="vendor"/>
+	<buildpathentry kind="con" path="org.eclipse.php.core.LANGUAGE"/>
+</buildpath>
