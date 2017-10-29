@@ -83,7 +83,7 @@ $app->group('/user', function() use ($app){
       // este post não está enviando nada... o token/create não ta recebendo os dados
       //return $app->subRequest('POST', '/token/create', "email={$email}&senha={$user->senha}", [], [], '', new \Slim\Http\Response());
       // tentei descobrir como fazer um subrequest do token create... não deu certo. Vou fazer a aplicação chamar esta rota
-      return 'true'; // este retorno funciona para a aplicação!
+      return $this->response->withJson($user); // este retorno funciona para a aplicação!
     }else{
       $this->logger->info("Requisição POST para logar USUARIO recusada!");
       return 'false';
