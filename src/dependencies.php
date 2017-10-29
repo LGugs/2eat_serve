@@ -28,14 +28,16 @@ $container['db'] = function($c){
     return $pdo;
 };
 
+/*
 // tentando criar uma função que me retorne a uma chave de autenticação!
 // ta lindo!!
 $container['apiKey'] = function($c){
     $settings = $c->get('settings')['apiKey'];
     session_start();
-    $_SESSION['uid']=$settings['uid_value'];
+    $_SESSION['uid']=$settings['uid_value']; //o valor de $settings['uid_value'] é sempre 1
     $session_uid=$_SESSION['uid'];
     define("SITE_KEY", "2eat");
     $key = md5(SITE_KEY.$session_uid);
     return hash('sha256', $key.$_SERVER['REMOTE_ADDR']);
 };
+*/

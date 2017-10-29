@@ -15,7 +15,7 @@ return [
             'path' => isset($_ENV['docker']) ? 'php://stdout' : __DIR__ . '/../logs/app.log',
             'level' => \Monolog\Logger::DEBUG,
         ],
-        
+
         //banco de dados
         'db' => [
             'host' => 'localhost',
@@ -23,11 +23,11 @@ return [
             'user' => 'root',
             'pass' => 'ap310608039090lg'
         ],
-        
+        /*
         // inserindo chave de sessão TESTE
         'apiKey' => [
-            'uid_value' => '1'   
-        ]
-        
+            'uid_value' => '1'
+        ]*/
+
     ],
 ];
