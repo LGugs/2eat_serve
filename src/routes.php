@@ -91,6 +91,12 @@ $app->group('/user', function() use ($app){
     //return $this->response->withJson($input);
   });
 
+  //seguir um usuário
+
+  //exibe lista de seguidos
+
+  //exibe lista de seguidores
+
 
 // retorna todos de uma tabela
   $app->get('/todos', function ($request, $response, $args) {
@@ -101,7 +107,7 @@ $app->group('/user', function() use ($app){
   });
 
 // retorna um item da tabela pelo id
-  $app->get('/busca/[{id}]', function ($request, $response, $args) {
+  $app->get('/buscaId/[{id}]', function ($request, $response, $args) {
     $sth = $this->db->prepare("SELECT * FROM user WHERE id=:id");
     $sth->bindParam("id", $args['id']);
     $sth->execute();
@@ -120,8 +126,8 @@ $app->group('/user', function() use ($app){
   });
 
 // retorna o resultado de uma busca de usuários com o e-mail parecido com o que vc digitar
-  $app->get('/user/busca/[{query}]', function ($request, $response, $args) {
-    $sth = $this->db->prepare("SELECT * FROM user WHERE UPPER(email) LIKE :query ORDER BY nome");
+  $app->get('/busca/[{query}]', function ($request, $response, $args) {
+    $sth = $this->db->prepare("SELECT * FROM user WHERE nome LIKE :query ORDER BY nome");
     $query = "%".$args['query']."%";
     $sth->bindParam("query", $query);
     $sth->execute();
@@ -158,5 +164,42 @@ $app->group('/user', function() use ($app){
     }else{
         return "Erro ao deletar!";
     }
+  });
+});
+
+$app->group('/receita', function() use ($app){
+
+// retorna todas as receitas
+  $app->get('/todos', function ($request, $response, $args) {
+    $sth = $this->db->prepare("SELECT * FROM receita ORDER BY tempo");
+    $sth->execute();
+    $receitas = $sth->fetchAll();
+    return $this->response->withJson($receitas);
+  });
+
+  $app->post('/add', function ($request, $response) {
+    $input = $request->getParsedBody();
+    $sql = "INSERT INTO receita (titulo, ingredientes, descricao, id_user, tag) VALUES (:titulo, :ingredientes, :descricao, :id_user, :tag)";
+    $sth = $this->db->prepare($sql);
+    $sth->execute([
+        ':titulo' => $input['titulo'],
+        ':ingredientes' => $input['ingredientes'],
+        ':descricao' => $input['descricao'],
+        ':tag' => $input['tag'],
+        ':id_user' => $_SESSION['uid']
+    ]);
+    $input['id'] = $this->db->lastInsertId();
+    $this->logger->info("Requisição POST para adicionar RECEITA bem sucedida!");
+    return $this->response->withJson($input);
+  });
+
+// retorna as receitas do usuário
+  $app->get('/doChef', function ($request, $response, $args) {
+    $sth = $this->db->prepare("SELECT * FROM receita WHERE id_user=:id ORDER BY tempo DESC");
+    $sth->bindParam("id", $_SESSION['uid']);
+    $sth->execute();
+    $receitas = $sth->fetchAll();
+    return $this->response->withJson($receitas);
+    //return $user->nome;
   });
 });
