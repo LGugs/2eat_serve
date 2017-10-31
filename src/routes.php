@@ -92,6 +92,17 @@ $app->group('/user', function() use ($app){
   });
 
   //seguir um usuário
+  $app->get('/follow/[{id}]', function ($request, $response, $args) {
+    $sql = "INSERT INTO user_relation (id_user, id_user_follow) VALUES (:id_user, :id_user_follow)";
+    $sth = $this->db->prepare($sql);
+    // salva o id pela sessão e o id do seguido pelo args
+    $sth->execute([
+        ':id_user' => $_SESSION['uid'],
+        ':id_user_follow' => $args['id']
+    ]);
+    $this->logger->info("Requisição GET para seguir usuário bem sucedida!");
+    return 'true'; // sem retorno caso ele dê problemas!! cuidado!
+  });
 
   //exibe lista de seguidos
 
@@ -125,9 +136,12 @@ $app->group('/user', function() use ($app){
     //return $user->nome;
   });
 
-// retorna o resultado de uma busca de usuários com o e-mail parecido com o que vc digitar
+// PESQUISAR SELECT PARA SEPARAR OS USUARIOS
+// retorna o resultado de uma busca de usuários com o nome parecido com o que vc digitar - tem que remover o usuário atual da pesquisa assim como os quem ele segue
   $app->get('/busca/[{query}]', function ($request, $response, $args) {
-    $sth = $this->db->prepare("SELECT * FROM user WHERE nome LIKE :query ORDER BY nome");
+    $id = $_SESSION['uid'];
+    //SELECT id FROM user WHERE id != 50 OR id != (select id_user_follow from user_relation where id_user = 50)
+    $sth = $this->db->prepare("SELECT * FROM user WHERE nome LIKE :query AND id != '$id' ORDER BY nome");
     $query = "%".$args['query']."%";
     $sth->bindParam("query", $query);
     $sth->execute();
