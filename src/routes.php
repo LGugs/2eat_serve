@@ -207,6 +207,17 @@ $app->group('/receita', function() use ($app){
     return $this->response->withJson($input);
   });
 
+  $app->get('/busca/[{query}]', function ($request, $response, $args) {
+    $id = $_SESSION['uid'];
+    //SELECT id FROM user WHERE id != 50 OR id != (select id_user_follow from user_relation where id_user = 50)
+    $sth = $this->db->prepare("SELECT * FROM receita WHERE titulo LIKE :query AND id_user != '$id' ORDER BY titulo");
+    $query = "%".$args['query']."%";
+    $sth->bindParam("query", $query);
+    $sth->execute();
+    $busca = $sth->fetchAll();
+    return $this->response->withJson($busca);
+  });
+
 // retorna as receitas do usuário
   $app->get('/doChef', function ($request, $response, $args) {
     $sth = $this->db->prepare("SELECT * FROM receita WHERE id_user=:id ORDER BY tempo DESC");
