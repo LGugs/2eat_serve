@@ -19,7 +19,6 @@ $app->get('/[{name}]', function (Request $request, Response $response, array $ar
 // Autenticação - TOKENS
 $app->group('/token', function() use ($app){
   $app->post('/create', function ($request, $response, $args){
-    //session_start();
     $input = $request->getParsedBody();
     define("SITE_KEY", "2eat");
     $key = md5(SITE_KEY.$input['email']);
@@ -88,7 +87,6 @@ $app->group('/user', function() use ($app){
       $this->logger->info("Requisição POST para logar USUARIO recusada!");
       return 'false';
     }
-    //return $this->response->withJson($input);
   });
 
   //seguir um usuário
@@ -183,6 +181,15 @@ $app->group('/user', function() use ($app){
 
 $app->group('/receita', function() use ($app){
 
+  // retorna o feed do caboco, ordena por tempo
+  $app->get('/feed', function ($request, $response, $args) {
+    $id = $_SESSION['uid'];
+    $sth = $this->db->prepare("SELECT us.nome, us.foto, re.id, re.titulo, re.imagemUrl, re.nota, re.tempo, re.imagemUrl, re.tag, re.ava_num FROM user_relation AS us2 INNER JOIN user AS us ON us.id = us2.id_user_follow INNER JOIN receita as re ON us2.id_user_follow = re.id_user WHERE us2.id_user = '$id' ORDER BY re.tempo DESC");
+    $sth->execute();
+    $receitas = $sth->fetchAll();
+    return $this->response->withJson($receitas);
+  });
+
 // retorna todas as receitas
   $app->get('/todos', function ($request, $response, $args) {
     $sth = $this->db->prepare("SELECT * FROM receita ORDER BY tempo");
@@ -225,6 +232,14 @@ $app->group('/receita', function() use ($app){
     $sth->execute();
     $receitas = $sth->fetchAll();
     return $this->response->withJson($receitas);
-    //return $user->nome;
+  });
+
+// retorna uma receita especifica
+  $app->get('/buscaId/[{id}]', function ($request, $response, $args) {
+    $sth = $this->db->prepare("SELECT * FROM receita WHERE id=:id");
+    $sth->bindParam("id", $args['id']);
+    $sth->execute();
+    $receita = $sth->fetchAll();
+    return $this->response->withJson($receita);
   });
 });
