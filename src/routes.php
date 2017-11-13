@@ -242,4 +242,20 @@ $app->group('/receita', function() use ($app){
     $receita = $sth->fetchAll();
     return $this->response->withJson($receita);
   });
+
+  // retorna as avaliacoes (usuario e nota) de uma receita especifica
+    $app->get('/avaliacoes/[{id}]', function ($request, $response, $args) {
+      $sth = $this->db->prepare("SELECT us.nome, av.nota, av.texto, av.id_comenta FROM avaliacao AS av INNER JOIN user AS us ON av.id_user = us.id WHERE id_receita=:id");
+      $sth->bindParam("id", $args['id']);
+      $sth->execute();
+      $avaliacoes = $sth->fetchAll();
+      return $this->response->withJson($avaliacoes);
+    });
 });
+
+/*
+$app->group('/avaliacao', function() use ($app){
+
+  //
+
+});*/
