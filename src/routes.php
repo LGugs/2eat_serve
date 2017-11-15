@@ -184,7 +184,7 @@ $app->group('/receita', function() use ($app){
   // retorna o feed do caboco, ordena por tempo
   $app->get('/feed', function ($request, $response, $args) {
     $id = $_SESSION['uid'];
-    $sth = $this->db->prepare("SELECT us.nome, us.foto, re.id, re.titulo, re.imagemUrl, re.nota, re.tempo, re.imagemUrl, re.tag, re.ava_num FROM user_relation AS us2 INNER JOIN user AS us ON us.id = us2.id_user_follow INNER JOIN receita as re ON us2.id_user_follow = re.id_user WHERE us2.id_user = '$id' ORDER BY re.tempo DESC");
+    $sth = $this->db->prepare("SELECT us.nome, us.foto, re.id, re.titulo, re.imagemUrl, re.nota, re.tempo, re.imagemUrl, re.tag, re.ava_num, re.comment_num FROM user_relation AS us2 INNER JOIN user AS us ON us.id = us2.id_user_follow INNER JOIN receita as re ON us2.id_user_follow = re.id_user WHERE us2.id_user = '$id' ORDER BY re.tempo DESC");
     $sth->execute();
     $receitas = $sth->fetchAll();
     return $this->response->withJson($receitas);
@@ -245,17 +245,102 @@ $app->group('/receita', function() use ($app){
 
   // retorna as avaliacoes (usuario e nota) de uma receita especifica
     $app->get('/avaliacoes/[{id}]', function ($request, $response, $args) {
-      $sth = $this->db->prepare("SELECT us.nome, av.nota, av.texto, av.id_comenta FROM avaliacao AS av INNER JOIN user AS us ON av.id_user = us.id WHERE id_receita=:id");
+      $sth = $this->db->prepare("SELECT us.nome, av.nota, av.texto, av.id_comenta FROM avaliacao AS av INNER JOIN user AS us ON av.id_user = us.id WHERE id_receita=:id ORDER BY av.tempo DESC");
       $sth->bindParam("id", $args['id']);
       $sth->execute();
       $avaliacoes = $sth->fetchAll();
       return $this->response->withJson($avaliacoes);
     });
+
+// retorna as quantidades de comentarios e avaliações
+  $app->get('/quantAvalia/[{id}]', function ($request, $response, $args) {
+    $sth = $this->db->prepare("SELECT COUNT(av.nota) as quant_avalia, COUNT(av.texto) as quant_comments FROM avaliacao AS av INNER JOIN user AS us ON av.id_user = us.id WHERE id_receita=:id");
+    $sth->bindParam("id", $args['id']);
+    $sth->execute();
+    $cont = $sth->fetchObject();
+    $this->logger->info("Requisição GET para contar AVALIAÇÕES e/ou COMENTÁRIOS bem sucedida!");
+    return $this->response->withJson($cont);
+  });
+
+
+  $app->post('/addCountAval', function ($request, $response){
+    $input = $request->getParsedBody();
+    $this->logger->info("Requisição POST para alterar quantidade de AVALIAÇÕES e/ou COMENTÁRIOS de uma RECEITA bem sucedida! = '$input[ava_num]'");
+    $sql = "UPDATE receita SET (ava_num='$input[ava_num]', comment_num='$input[comment_num]') WHERE id='$input[id_receita]'";
+    $sth = $this->db->prepare($sql);
+    $sth->execute();
+    return $this->response->withJson($input);
+  });
 });
 
-/*
 $app->group('/avaliacao', function() use ($app){
 
-  //
+  // adiciona avaliacao e atualiza quantidade na receita
+  $app->post('/add', function ($request, $response){
+    $input = $request->getParsedBody();
+    $sql = "INSERT INTO avaliacao (id_user, id_receita, nota, texto, id_comenta) VALUES (:id_user, :id_receita, :nota, :texto, :id_comenta)";
+    $sth = $this->db->prepare($sql);
+    $sth->execute([
+        ':id_receita' => $input['id_receita'],
+        ':nota' => $input['nota'],
+        ':texto' => $input['texto'],
+        ':id_comenta' => $input['id_comenta'],
+        ':id_user' => $_SESSION['uid']
+    ]);
+    $input['id'] = $this->db->lastInsertId();
 
-});*/
+    //aprender como fazer um subrequest para esta função a seguir - realizar contagem de comentarios e notas da receita
+    $sth3 = $this->db->prepare("SELECT COUNT(av.nota) as quant_avalia, COUNT(av.texto) as quant_comments FROM avaliacao AS av INNER JOIN user AS us ON av.id_user = us.id WHERE id_receita=".$input['id_receita']);
+    $sth3->execute();
+    $cont = $sth3->fetchObject();
+    $dec_cont = json_encode($cont);
+    $dec_cont2 = json_decode($dec_cont, true);
+
+    //aprender como fazer um subrequest para esta função a seguir - atualizar numero de comentarios e notas
+    if($input['texto'] & $input['nota']){
+      $sql2 = "UPDATE receita SET ava_num=:ava_num, comment_num=:comment_num WHERE id=".$input['id_receita'];
+      $sth2 = $this->db->prepare($sql2);
+      $sth2->execute([
+          ':ava_num' => $dec_cont2['quant_avalia'],
+          ':comment_num' => $dec_cont2['quant_comments']
+      ]);
+
+      //aprender como fazer um subrequest para esta função a seguir - atualizar nota da receita
+      $media = $input['nota']/$dec_cont2['quant_avalia'];
+
+      $sql4 = "UPDATE receita SET nota=:nota WHERE id=".$input['id_receita'];
+      $sth4 = $this->db->prepare($sql4);
+      $sth4->execute([
+          ':nota' => $media,
+      ]);
+    }else if($input['texto']){
+      $sql2 = "UPDATE receita SET comment_num=:comment_num WHERE id=".$input['id_receita'];
+      $sth2 = $this->db->prepare($sql2);
+      $sth2->execute([
+          ':comment_num' => $dec_cont2['quant_comments']
+      ]);
+    }else if($input['nota']){
+      $sql2 = "UPDATE receita SET ava_num=:ava_num WHERE id=".$input['id_receita'];
+      $sth2 = $this->db->prepare($sql2);
+      $sth2->execute([
+          ':ava_num' => $dec_cont2['quant_avalia'],
+      ]);
+
+      //aprender como fazer um subrequest para esta função a seguir - atualizar nota da receita
+      $media = $input['nota']/$dec_cont2['quant_avalia'];
+
+      $sql4 = "UPDATE receita SET nota=:nota WHERE id=".$input['id_receita'];
+      $sth4 = $this->db->prepare($sql4);
+      $sth4->execute([
+          ':nota' => $media,
+      ]);
+    }
+
+
+
+
+    $this->logger->info("Requisição POST para adicionar AVALIAÇÃO e/ou COMENTÁRIO bem sucedida!");
+    return $this->response->withJson($input);
+  });
+
+});
