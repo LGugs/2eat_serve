@@ -52,7 +52,7 @@ $app->group('/token', function() use ($app){
 // fecha a sessão e apaga o token
   $app->get('/del', function ($request, $response, $args){
     if(isset($_SESSION['token'])){
-      $this->logger->info("Requisição GET para url: '/token/del' bem sucedida! Token apagado!");
+      $this->logger->info("Requisição GET para url: '/token/del' bem sucedida! Sessão destruída e token apagado!");
       session_destroy();
       return '0';
     }else{
@@ -99,7 +99,7 @@ $app->group('/user', function() use ($app){
         ':id_user' => $_SESSION['uid'],
         ':id_user_follow' => $args['id']
     ]);
-    $this->logger->info("Requisição GET para url: '/follow/".$args['id']."' bem sucedida! Usuário de id ".$_SESSION['uid']." agora segue usuário com o id ".$args['id']."!");
+    $this->logger->info("Requisição GET para url: '/user/follow/".$args['id']."' bem sucedida! Usuário de id ".$_SESSION['uid']." agora segue usuário com o id ".$args['id']."!");
     return 'true'; // sem retorno caso ele dê problemas!! cuidado!
   });
 
@@ -111,11 +111,21 @@ $app->group('/user', function() use ($app){
         ':id' => $_SESSION['uid']
     ]);
     $users = $sth->fetchAll();
-    $this->logger->info("Requisição GET para url: '/following' bem sucedida! Exibindo lista de usuários seguidos pelo usuário de id: ".$_SESSION['uid']);
+    $this->logger->info("Requisição GET para url: '/user/following' bem sucedida! Exibindo lista de usuários seguidos pelo usuário de id: ".$_SESSION['uid']);
     return $this->response->withJson($users); // sem retorno caso ele dê problemas!! cuidado!
   });
-  //exibe lista de seguidores
 
+  //exibe lista de seguidores
+  $app->get('/followers', function ($request, $response, $args) {
+    $sql = "SELECT us.nome, us.email FROM user_relation inner join user as us on us.id = id_user WHERE id_user_follow = :id";
+    $sth = $this->db->prepare($sql);
+    $sth->execute([
+        ':id' => $_SESSION['uid']
+    ]);
+    $users = $sth->fetchAll();
+    $this->logger->info("Requisição GET para url: '/user/followers' bem sucedida! Exibindo lista de usuários que seguem o usuário de id: ".$_SESSION['uid']);
+    return $this->response->withJson($users); // sem retorno caso ele dê problemas!! cuidado!
+  });
 
 // retorna todos de uma tabela
   $app->get('/todos', function ($request, $response, $args) {
@@ -155,6 +165,7 @@ $app->group('/user', function() use ($app){
     $sth->bindParam("query", $query);
     $sth->execute();
     $busca = $sth->fetchAll();
+    $this->logger->info("Requisição GET para url: '/user/busca/".$args['query']."' bem sucedida! Exibindo lista de usuários encontrados!");
     return $this->response->withJson($busca);
   });
 
@@ -193,12 +204,21 @@ $app->group('/user', function() use ($app){
 $app->group('/receita', function() use ($app){
 
   // retorna o feed do caboco, ordena por tempo
-  $app->get('/feed', function ($request, $response, $args) {
+  $app->post('/feed', function ($request, $response, $args) {
+    $input = $request->getParsedBody();
     $id = $_SESSION['uid'];
-    $sth = $this->db->prepare("SELECT us.nome, us.foto, re.id, re.titulo, re.imagemUrl, re.nota, re.tempo, re.imagemUrl, re.tag, re.ava_num, re.comment_num FROM user_relation AS us2 INNER JOIN user AS us ON us.id = us2.id_user_follow INNER JOIN receita as re ON us2.id_user_follow = re.id_user WHERE us2.id_user = '$id' ORDER BY re.tempo DESC");
+    if($input['ordem'] == '1'){
+      $sth = $this->db->prepare("SELECT us.nome, us.foto, re.id, re.titulo, re.imagemUrl, re.nota, re.tempo, re.imagemUrl, re.tag, re.ava_num, re.comment_num FROM user_relation AS us2 INNER JOIN user AS us ON us.id = us2.id_user_follow INNER JOIN receita as re ON us2.id_user_follow = re.id_user WHERE us2.id_user = '$id' ORDER BY re.tempo DESC");
+    }else{
+      $sth = $this->db->prepare("SELECT us.nome, us.foto, re.id, re.titulo, re.imagemUrl, re.nota, re.tempo, re.imagemUrl, re.tag, re.ava_num, re.comment_num FROM user_relation AS us2 INNER JOIN user AS us ON us.id = us2.id_user_follow INNER JOIN receita as re ON us2.id_user_follow = re.id_user WHERE us2.id_user = '$id' ORDER BY re.nota DESC");
+    }
     $sth->execute();
     $receitas = $sth->fetchAll();
-    $this->logger->info("Requisição GET para url: '/receita/feed' bem sucedida! Feed exibido para o usuário de id: ".$id);
+    if($input['ordem'] == '1'){
+      $this->logger->info("Requisição POST para url: '/receita/feed' bem sucedida! Feed exibido por ordem temporal para o usuário de id: ".$id);
+    }else{
+      $this->logger->info("Requisição POST para url: '/receita/feed' bem sucedida! Feed exibido por ranking para o usuário de id: ".$id);
+    }
     return $this->response->withJson($receitas);
   });
 
@@ -234,6 +254,7 @@ $app->group('/receita', function() use ($app){
     $sth->bindParam("query", $query);
     $sth->execute();
     $busca = $sth->fetchAll();
+    $this->logger->info("Requisição GET para url: '/receita/busca/".$args['query']."' bem sucedida! Exibindo lista de receitas encontradas!");
     return $this->response->withJson($busca);
   });
 
@@ -253,7 +274,7 @@ $app->group('/receita', function() use ($app){
     $sth->bindParam("id", $args['id']);
     $sth->execute();
     $receita = $sth->fetchAll();
-    $this->logger->info("Requisição GET para url: '/buscaId/".$args['id']."' bem sucedida! Receita exibida com sucesso!");
+    $this->logger->info("Requisição GET para url: '/receita/buscaId/".$args['id']."' bem sucedida! Receita exibida com sucesso!");
     return $this->response->withJson($receita);
   });
 
@@ -263,7 +284,7 @@ $app->group('/receita', function() use ($app){
       $sth->bindParam("id", $args['id']);
       $sth->execute();
       $avaliacoes = $sth->fetchAll();
-      $this->logger->info("Requisição GET para url: '/avaliacoes/".$args['id']."' bem sucedida! Avaliações de receita exibida com sucesso!");
+      $this->logger->info("Requisição GET para url: '/receita/avaliacoes/".$args['id']."' bem sucedida! Avaliações de receita exibida com sucesso!");
       return $this->response->withJson($avaliacoes);
     });
 
@@ -277,16 +298,16 @@ $app->group('/receita', function() use ($app){
       });
 
 // retorna as quantidades de comentarios e avaliações
-  $app->get('/quantAvalia/[{id}]', function ($request, $response, $args) {
+/*  $app->get('/quantAvalia/[{id}]', function ($request, $response, $args) {
     $sth = $this->db->prepare("SELECT COUNT(av.nota) as quant_avalia, COUNT(av.texto) as quant_comments FROM avaliacao AS av INNER JOIN user AS us ON av.id_user = us.id WHERE id_receita=:id");
     $sth->bindParam("id", $args['id']);
     $sth->execute();
     $cont = $sth->fetchObject();
     $this->logger->info("Requisição GET para contar AVALIAÇÕES e/ou COMENTÁRIOS bem sucedida!");
     return $this->response->withJson($cont);
-  });
+  }); */
 
-
+/*
   $app->post('/addCountAval', function ($request, $response){
     $input = $request->getParsedBody();
     $this->logger->info("Requisição POST para alterar quantidade de AVALIAÇÕES e/ou COMENTÁRIOS de uma RECEITA bem sucedida! = '$input[ava_num]'");
@@ -294,7 +315,7 @@ $app->group('/receita', function() use ($app){
     $sth = $this->db->prepare($sql);
     $sth->execute();
     return $this->response->withJson($input);
-  });
+  });*/
 });
 
 $app->group('/avaliacao', function() use ($app){
@@ -373,7 +394,7 @@ $app->group('/avaliacao', function() use ($app){
       ]);
     }
 
-    $this->logger->info("Requisição POST para adicionar AVALIAÇÃO e/ou COMENTÁRIO bem sucedida!");
+    $this->logger->info("Requisição POST para url: '/receita/avaliacao/add' bem sucedida! Avaliação do usuário de id: ".$_SESSION['uid']." foi inserida com sucesso na receita de id: ".$input['id_receita']);
     return $this->response->withJson($input);
   });
 

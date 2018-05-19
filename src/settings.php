@@ -12,7 +12,7 @@ return [
         // Monolog settings
         'logger' => [
             'name' => '2eat-API',
-            'path' => isset($_ENV['docker']) ? 'php://stdout' : __DIR__ . '/../logs/app.log',
+            'path' => isset($_ENV['docker']) ? 'php://stdout' : __DIR__ . '/../logs/aula.log',
             'level' => \Monolog\Logger::DEBUG,
         ],
 
